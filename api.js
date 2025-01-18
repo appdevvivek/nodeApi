@@ -1,61 +1,139 @@
-const express = require('express');
+const express = require("express");
+const mongoose = require("mongoose");
+const bodyParser = require("body-parser");
+const bcrypt = require("bcryptjs");
+
+
 const app = express();
-const PORT = 3000;
+app.use(bodyParser.json());
 
-// Middleware to parse JSON requests
-app.use(express.json());
+// MongoDB Connection
+// const mongoURI = "mongodb+srv://vivekkushwah011:4gkN72l0GyLAES71@cluster0.xh2b4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
+const mongoURI = "mongodb+srv://vivekkushwah011:4gkN72l0GyLAES71@cluster0.xh2b4.mongodb.net/FastApi?retryWrites=true&w=majority&appName=Cluster0";
 
-// Sample data
-let users = [
-    { id: 1, name: 'John Doe', email: 'john@example.com' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com' },
-];
 
-// Routes
+mongoose
+  .connect(mongoURI)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
 
-// 1. Get all users
-app.get('/users', (req, res) => {
-    res.json(users);
+// Item Schema and Model
+const ItemSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  quantity: { type: Number, required: true },
+});
+const Item = mongoose.model("Item", ItemSchema);
+
+// Product Schema and Model
+const ProductSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  product_qulity: { type: String, required: true },
+  product_color: { type: String, required: true },
+  quantity: { type: Number, required: true },
+});
+const Product = mongoose.model("Product", ProductSchema);
+
+
+// User Schema
+const UserSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
 });
 
-// 2. Get a user by ID
-app.get('/users/:id', (req, res) => {
-    const user = users.find(u => u.id === parseInt(req.params.id));
-    if (!user) return res.status(404).send('User not found');
-    res.json(user);
+const User = mongoose.model("User", UserSchema);
+
+// Signup API
+app.post("/api/signup", async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Check if the user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
+    // Hash the password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+    // Create a new user
+    const newUser = new User({
+      name,
+      email,
+      password: hashedPassword,
+    });
+
+    // Save the user to the database
+    await newUser.save();
+    res.status(201).json({ message: "User created successfully", userId: newUser._id });
+  } catch (err) {
+    res.status(500).json({ message: "Error creating user", error: err.message });
+  }
 });
 
-// 3. Create a new user
-app.post('/users', (req, res) => {
-    const newUser = {
-        id: users.length + 1,
-        name: req.body.name,
-        email: req.body.email,
-    };
-    users.push(newUser);
-    res.status(201).json(newUser);
+
+// Login API
+app.post("/api/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Check if the user exists
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    // Successful login
+    res.status(200).json({ message: "Login successful", userId: user._id, name: user.name });
+  } catch (err) {
+    res.status(500).json({ message: "Error during login", error: err.message });
+  }
 });
 
-// 4. Update a user
-app.put('/users/:id', (req, res) => {
-    const user = users.find(u => u.id === parseInt(req.params.id));
-    if (!user) return res.status(404).send('User not found');
-
-    user.name = req.body.name || user.name;
-    user.email = req.body.email || user.email;
-    res.json(user);
+// Simple Create API (POST)
+app.post("/api/items", async (req, res) => {
+  try {
+    const newItem = new Item(req.body);
+    const savedItem = await newItem.save();
+    res.status(201).json(savedItem);
+  } catch (err) {
+    res.status(500).json({ message: "Error creating item", error: err });
+  }
 });
 
-// 5. Delete a user
-app.delete('/users/:id', (req, res) => {
-    const userIndex = users.findIndex(u => u.id === parseInt(req.params.id));
-    if (userIndex === -1) return res.status(404).send('User not found');
-
-    const deletedUser = users.splice(userIndex, 1);
-    res.json(deletedUser);
+// Simple Create API (POST)
+app.post("/api/products", async (req, res) => {
+  try {
+    const newProd = new Product(req.body);
+    const savedProd= await newProd.save();
+    res.status(201).json(savedProd);
+  } catch (err) {
+    res.status(500).json({ message: "Error creating item", error: err });
+  }
 });
 
-// Start the server
+// Get Item by ID API (GET)
+app.get("/api/items/:id", async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+    res.status(200).json(item);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching item", error: err });
+  }
+});
+
+const PORT = 5001; // Change the port if necessary
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server running at http://localhost:${PORT}`);
 });
