@@ -3,12 +3,11 @@ const mongoose = require("mongoose");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
 
-
+const routes = require("./routes/routes");
 const app = express();
 app.use(bodyParser.json());
 
 // MongoDB Connection
-// const mongoURI = "mongodb+srv://vivekkushwah011:4gkN72l0GyLAES71@cluster0.xh2b4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 const mongoURI = "mongodb+srv://vivekkushwah011:4gkN72l0GyLAES71@cluster0.xh2b4.mongodb.net/FastApi?retryWrites=true&w=majority&appName=Cluster0";
 
 
@@ -16,6 +15,11 @@ mongoose
   .connect(mongoURI)
   .then(() => console.log("Connected to MongoDB"))
   .catch((err) => console.error("MongoDB connection error:", err));
+
+
+  app.use("/",routes);
+
+  app.use("/api/login",routes);
 
 // Item Schema and Model
 const ItemSchema = new mongoose.Schema({
@@ -74,29 +78,6 @@ app.post("/api/signup", async (req, res) => {
 });
 
 
-// Login API
-app.post("/api/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Check if the user exists
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Verify password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ message: "Invalid email or password" });
-    }
-
-    // Successful login
-    res.status(200).json({ message: "Login successful", userId: user._id, name: user.name });
-  } catch (err) {
-    res.status(500).json({ message: "Error during login", error: err.message });
-  }
-});
 
 // Simple Create API (POST)
 app.post("/api/items", async (req, res) => {
@@ -137,3 +118,5 @@ const PORT = 5001; // Change the port if necessary
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
+ 
