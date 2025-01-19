@@ -1,13 +1,14 @@
-const mongoose = require("mongoose");
+//const mongoose = require("mongoose");
+const mongooes = require("mongoose");
 
 
 // Define the Login Schema
-const LoginSchema = new mongoose.Schema({
+const LoginSchema = new mongooes.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-});
+},{ timestamps: true });
 
 // Create and export the Login model
-const Login =  mongoose.model("Login", LoginSchema);
+const Login =  mongooes.model("Login", LoginSchema);
 
 module.exports = Login;
